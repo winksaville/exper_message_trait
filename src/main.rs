@@ -1,47 +1,44 @@
-use std::time::Instant;
-use crossbeam_channel::unbounded;
+use std::{time::Instant, any::TypeId};
+use core::mem::size_of_val;
+//use crossbeam_channel::unbounded;
 
-pub trait Message {
-    fn get_id(&self) -> u64;
-    fn get_instant(&self) -> Instant;
-    fn get_req_id(&self) -> u64;
-    fn get_req_instant(&self) -> Instant;
-}
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PingReq {
     pub id: u64,
     pub instant: Instant,
 }
 
 impl PingReq {
-    fn new(id: u64) -> PingReq {
+    fn new(id: u64) -> Self {
         Self {
             id,
             instant: Instant::now(),
         }
     }
+
+    fn print_size_of(&self) {
+        println!("size_of_self={}", size_of_val(self));
+    }
+
+    #[allow(unused)]
+    // Trying to use this in a `if {} else if {} else {}` statement
+    // doesn't work because ba is moved and not returned. If ba is
+    // a reference we still have a problem with because we then
+    // need to clone to return the Option<Box<Self>>
+    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
+        if let Ok(v) = ba.downcast::<Self>() {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
+        Box::new(self)
+    }
 }
 
-impl Message for PingReq {
-    fn get_id(&self) -> u64 {
-        self.id
-    }
-
-    fn get_instant(&self) -> Instant {
-        self.instant
-    }
-
-    fn get_req_id(&self) -> u64 {
-        self.id
-    }
-
-    fn get_req_instant(&self) -> Instant {
-        self.instant
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PingRsp {
     pub req_id: u64,
     pub req_instant: Instant,
@@ -58,146 +55,115 @@ impl PingRsp {
             instant: Instant::now(),
         }
     }
-    fn from(id: u64, req: Box<dyn Message>) -> PingRsp {
-        Self {
-            req_id: req.get_id(),
-            req_instant: req.get_instant(),
-            id,
-            instant: Instant::now(),
+
+    fn print_size_of(&self) {
+        println!("size_of_self={}", size_of_val(self));
+    }
+
+    #[allow(unused)]
+    // See above
+    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
+        if let Ok(v) = ba.downcast::<Self>() {
+            Some(v)
+        } else {
+            None
         }
     }
-}
 
-impl Message for PingRsp {
-    fn get_id(&self) -> u64 {
-        self.id
-    }
-
-    fn get_instant(&self) -> Instant {
-        self.instant
-    }
-
-    fn get_req_id(&self) -> u64 {
-        self.req_id
-    }
-
-    fn get_req_instant(&self) -> Instant {
-        self.req_instant
+    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
+        Box::new(self)
     }
 }
 
-fn two_channels() {
-    let (ping_req_tx, ping_req_rx) = unbounded::<PingReq>();
-    let (ping_rsp_tx, ping_rsp_rx) = unbounded::<PingRsp>();
 
-    let instant0 = Instant::now();
-    let instant1 = Instant::now();
-    let instant2 = Instant::now();
-    let start_instant = Instant::now();
+#[derive(Clone, Debug)]
+pub struct Other;
 
-    // Create req and send it
-    let req = PingReq::new(1);
-    ping_req_tx.send(req).unwrap();
+impl Other {
+    fn new() -> Other {
+        Other
+    }
 
-    // Receive response
-    let req_recv = ping_req_rx.recv().unwrap();
+    fn print_size_of(&self) {
+        println!("size_of_self={}", size_of_val(self));
+    }
 
-    // Send response
-    let rsp = PingRsp::new(2, &req_recv);
-    ping_rsp_tx.send(rsp).unwrap();
+    #[allow(unused)]
+    // See above
+    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
+        if let Ok(v) = ba.downcast::<Self>() {
+            Some(v)
+        } else {
+            None
+        }
+    }
 
-    // Recv response
-    let rsp_recv = ping_rsp_rx.recv().unwrap();
-    let recv_instant = Instant::now();
-
-    let time_to_send= rsp_recv.instant.duration_since(rsp_recv.req_instant).as_nanos();
-    let time_to_recv= recv_instant.duration_since(rsp_recv.instant).as_nanos();
-    let travel_time = recv_instant.duration_since(rsp_recv.req_instant).as_nanos();
-    let main_rtt = recv_instant.duration_since(start_instant).as_nanos();
-
-    println!("time between      instant1 and instant0 {}", instant1.duration_since(instant0).as_nanos());
-    println!("time between      instant2 and instant1 {}", instant2.duration_since(instant1).as_nanos());
-    println!("time between start_instant and instant2 {}", start_instant.duration_since(instant2).as_nanos());
-    println!("time_to_send={time_to_send}ns time_to_recv={time_to_recv}ns travel_time={travel_time}ns");
-    println!("(recv_instant - start_instant)={}ns", main_rtt);
-    println!();
-}
-
-fn two_channels_using_boxes() {
-    let (ping_req_tx, ping_req_rx) = unbounded::<Box<PingReq>>();
-    let (ping_rsp_tx, ping_rsp_rx) = unbounded::<Box<PingRsp>>();
-
-    let instant0 = Instant::now();
-    let instant1 = Instant::now();
-    let instant2 = Instant::now();
-    let start_instant = Instant::now();
-
-    // Create req and send it
-    let req = Box::new(PingReq::new(1));
-    ping_req_tx.send(req).unwrap();
-
-    // Receive response
-    let req_recv = ping_req_rx.recv().unwrap();
-
-    // Send response
-    let rsp = Box::new(PingRsp::new(2, &req_recv));
-    ping_rsp_tx.send(rsp).unwrap();
-
-    // Recv response
-    let rsp_recv = ping_rsp_rx.recv().unwrap();
-    let recv_instant = Instant::now();
-
-    let time_to_send= rsp_recv.instant.duration_since(rsp_recv.req_instant).as_nanos();
-    let time_to_recv= recv_instant.duration_since(rsp_recv.instant).as_nanos();
-    let travel_time = recv_instant.duration_since(rsp_recv.req_instant).as_nanos();
-    let main_rtt = recv_instant.duration_since(start_instant).as_nanos();
-
-    println!("time between      instant1 and instant0 {}", instant1.duration_since(instant0).as_nanos());
-    println!("time between      instant2 and instant1 {}", instant2.duration_since(instant1).as_nanos());
-    println!("time between start_instant and instant2 {}", start_instant.duration_since(instant2).as_nanos());
-    println!("time_to_send={time_to_send}ns time_to_recv={time_to_recv}ns travel_time={travel_time}ns");
-    println!("(recv_instant - start_instant)={}ns", main_rtt);
-    println!();
-}
-
-fn one_channel() {
-    let (tx, rx) = unbounded::<Box<dyn Message>>();
-
-    let instant0 = Instant::now();
-    let instant1 = Instant::now();
-    let instant2 = Instant::now();
-    let start_instant = Instant::now();
-
-    // Create req and send it
-    let req = Box::new(PingReq::new(1));
-    tx.send(req).unwrap();
-
-    // Receive response
-    let req_recv = rx.recv().unwrap();
-
-    // Send response
-    let rsp = Box::new(PingRsp::from(2, req_recv));
-    tx.send(rsp).unwrap();
-
-    // Recv response
-    let rsp_recv = rx.recv().unwrap();
-    let recv_instant = Instant::now();
-
-    let time_to_send= rsp_recv.get_instant().duration_since(rsp_recv.get_req_instant()).as_nanos();
-    let time_to_recv= recv_instant.duration_since(rsp_recv.get_instant()).as_nanos();
-    let travel_time = recv_instant.duration_since(rsp_recv.get_req_instant()).as_nanos();
-    let main_rtt = recv_instant.duration_since(start_instant).as_nanos();
-
-    println!("time between      instant1 and instant0 {}", instant1.duration_since(instant0).as_nanos());
-    println!("time between      instant2 and instant1 {}", instant2.duration_since(instant1).as_nanos());
-    println!("time between start_instant and instant2 {}", start_instant.duration_since(instant2).as_nanos());
-    println!("time_to_send={time_to_send}ns time_to_recv={time_to_recv}ns travel_time={travel_time}ns");
-    println!("(recv_instant - start_instant)={}ns", main_rtt);
-    println!();
+    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
+        Box::new(self)
+    }
 }
 
 fn main() {
-    two_channels();
-    two_channels_using_boxes();
-    one_channel();
+    let ping_req = PingReq::new(1);
+    ping_req.print_size_of();
+
+    let ping_rsp = PingRsp::new(1, &ping_req);
+    ping_rsp.print_size_of();
+
+    let other= Other::new();
+    other.print_size_of();
+
+    let ba_ping_req = ping_req.as_boxed_any();
+    let ba_ping_rsp = ping_rsp.as_boxed_any();
+    let ba_other = other.as_boxed_any();
+
+    // From [here](https://doc.rust-lang.org/std/any/index.html#smart-pointers-and-dyn-any)
+    // these should all be different
+    println!("          ba_ping_req.type_id={:?}", ba_ping_req.type_id());
+    println!("       (*ba_ping_req).type_id={:?}", (*ba_ping_req).type_id());
+    println!("      (&*ba_ping_req).type_id={:?}", (&*ba_ping_req).type_id());
+
+    // But they all return the same as this:
+    println!("TypeId::of::<PingReg>={:?}", TypeId::of::<PingReq>());
+
+    println!("          ba_ping_rsp.type_id={:?}", ba_ping_rsp.type_id());
+    println!("       (*ba_ping_rsp).type_id={:?}", (*ba_ping_rsp).type_id());
+    println!("      (&*ba_ping_rsp).type_id={:?}", (&*ba_ping_rsp).type_id());
+
+    // But they all return the same as this:
+    println!("TypeId::of::<PingRsp>={:?}", TypeId::of::<PingRsp>());
+
+    println!("          ba_other.type_id={:?}", ba_other.type_id());
+    println!("       (*ba_other).type_id={:?}", (*ba_other).type_id());
+    println!("      (&*ba_other).type_id={:?}", (&*ba_other).type_id());
+
+    // But they all return the same as this:
+    println!("TypeId::of::<Other>={:?}", TypeId::of::<Other>());
+
+    // So using Box<Any> via as_boxed_any() on the message allows me
+    // to discriminates properly but we lose the Box and the
+    // `if {} else fi {} else {}` doesn't look pretty.
+    fn process_box_dyn_any(ba: &Box<dyn std::any::Any>) {
+        // I couldn't get `from_any` working and this explanation
+        // if probably wrong, but either way `from_any` isn't working for me.
+        //
+        // So, trying to use `from_any` doesn't work because we consume it:
+        //    `if let Some(box_ping_req) = PingReq::from_any(ba_ping_req) {`
+        // And trying to pass a reference doesn't work because we want to move it out :(
+        //    `if let Some(box_ping_req) = PingReq::from_any(&ba_ping_req) {`
+        // But doing downcast_ref we can handle any type of message, directly
+        // here, but if we wan't to voe it we run into the same problem as
+        // trying to to use `from_any`.
+        if let Some(ping_req) = ba.downcast_ref::<PingReq>() {
+            println!("Yes, ba: {ba:?} is a &PingReq: {ping_req:?}");
+        } else if let Some(ping_rsp) = ba.downcast_ref::<PingRsp>() {
+            println!("Yes, ba: {ba:?} is a &PingRsp: {ping_rsp:?}");
+        } else {
+            println!("Not, ping_req or ping_rsp");
+        }
+    }
+
+    process_box_dyn_any(&ba_ping_req);
+    process_box_dyn_any(&ba_ping_rsp);
+    process_box_dyn_any(&ba_other);
 }
