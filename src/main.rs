@@ -1,5 +1,4 @@
-use std::{time::Instant, any::TypeId};
-use core::mem::size_of_val;
+use std::{any::Any, time::Instant};
 //use crossbeam_channel::unbounded;
 
 #[derive(Debug, Clone)]
@@ -14,27 +13,6 @@ impl PingReq {
             id,
             instant: Instant::now(),
         }
-    }
-
-    fn print_size_of(&self) {
-        println!("size_of_self={}", size_of_val(self));
-    }
-
-    #[allow(unused)]
-    // Trying to use this in a `if {} else if {} else {}` statement
-    // doesn't work because ba is moved and not returned. If ba is
-    // a reference we still have a problem with because we then
-    // need to clone to return the Option<Box<Self>>
-    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
-        if let Ok(v) = ba.downcast::<Self>() {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
-        Box::new(self)
     }
 }
 
@@ -55,26 +33,7 @@ impl PingRsp {
             instant: Instant::now(),
         }
     }
-
-    fn print_size_of(&self) {
-        println!("size_of_self={}", size_of_val(self));
-    }
-
-    #[allow(unused)]
-    // See above
-    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
-        if let Ok(v) = ba.downcast::<Self>() {
-            Some(v)
-        } else {
-            None
-        }
-    }
-
-    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
-        Box::new(self)
-    }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct Other;
@@ -83,87 +42,83 @@ impl Other {
     fn new() -> Other {
         Other
     }
+}
 
-    fn print_size_of(&self) {
-        println!("size_of_self={}", size_of_val(self));
-    }
+trait DispatchMsg<SM> {
+    fn dispatch_msg(&mut self, msg: Box<dyn Any>);
+}
 
-    #[allow(unused)]
-    // See above
-    fn from_any(ba: Box<dyn std::any::Any>) -> Option<Box<Self>> {
-        if let Ok(v) = ba.downcast::<Self>() {
-            Some(v)
-        } else {
-            None
+type ProcessMsgFn<SM> = fn(&mut SM, Box<dyn Any>) -> StateResult;
+
+// I'd like this to be:
+//   type StateResult<SM> = (Handled, Option<ProcessMsgFn<SM>>);
+// But then StateResult is circular with ProcessMsgFn and it won't compile
+type StateResult = Option<StateIdx>;
+type StateIdx = usize;
+
+#[allow(unused)]
+pub struct MySm {
+    states: Vec<ProcessMsgFn<Self>>,
+    current_state: StateIdx,
+    f1: i128,
+}
+
+impl MySm {
+    pub fn new(f1: i128) -> Self {
+        Self {
+            states: vec![Self::state1, Self::state2],
+            current_state: 0,
+            f1,
         }
     }
 
-    fn as_boxed_any(self) -> Box<dyn std::any::Any + 'static> {
-        Box::new(self)
+    pub fn state1(&mut self, msg: Box<dyn Any>) -> StateResult {
+        if let Some(msg) = msg.downcast_ref::<PingReq>() {
+            println!("state1: msg={msg:?}");
+            self.f1 += msg.id as i128;
+        } else if let Some(msg) = msg.downcast_ref::<PingRsp>() {
+            println!("state1: msg={msg:?}");
+            self.f1 -= msg.id as i128;
+        } else {
+            println!("state1: Unknown msg type={:?}", msg.type_id());
+        }
+
+        Some(1) // Transition to state2, i.e. StateIdx 1
+    }
+
+    pub fn state2(&mut self, msg: Box<dyn Any>) -> StateResult {
+        if let Some(msg) = msg.downcast_ref::<PingReq>() {
+            println!("state2: msg={msg:?}");
+            self.f1 -= msg.id as i128;
+        } else if let Some(msg) = msg.downcast_ref::<PingRsp>() {
+            println!("state2: msg={msg:?}");
+            self.f1 += msg.id as i128;
+        } else {
+            println!("state2: Unknown msg type={:?}", msg.type_id());
+        }
+
+        Some(0) // Transition to state1, i.e. StateIdx 0
+    }
+}
+
+impl<MySM> DispatchMsg<MySM> for MySm {
+    fn dispatch_msg(&mut self, msg: Box<dyn Any>) {
+        let result = (self.states[self.current_state])(self, msg);
+        if let Some(next_state_idx) = result {
+            self.current_state = next_state_idx;
+        }
     }
 }
 
 fn main() {
+    let mut mysm = MySm::new(123);
+
     let ping_req = PingReq::new(1);
-    ping_req.print_size_of();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(ping_req.clone()));
 
     let ping_rsp = PingRsp::new(1, &ping_req);
-    ping_rsp.print_size_of();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(ping_rsp));
 
-    let other= Other::new();
-    other.print_size_of();
-
-    let ba_ping_req = ping_req.as_boxed_any();
-    let ba_ping_rsp = ping_rsp.as_boxed_any();
-    let ba_other = other.as_boxed_any();
-
-    // From [here](https://doc.rust-lang.org/std/any/index.html#smart-pointers-and-dyn-any)
-    // these should all be different
-    println!("          ba_ping_req.type_id={:?}", ba_ping_req.type_id());
-    println!("       (*ba_ping_req).type_id={:?}", (*ba_ping_req).type_id());
-    println!("      (&*ba_ping_req).type_id={:?}", (&*ba_ping_req).type_id());
-
-    // But they all return the same as this:
-    println!("TypeId::of::<PingReg>={:?}", TypeId::of::<PingReq>());
-
-    println!("          ba_ping_rsp.type_id={:?}", ba_ping_rsp.type_id());
-    println!("       (*ba_ping_rsp).type_id={:?}", (*ba_ping_rsp).type_id());
-    println!("      (&*ba_ping_rsp).type_id={:?}", (&*ba_ping_rsp).type_id());
-
-    // But they all return the same as this:
-    println!("TypeId::of::<PingRsp>={:?}", TypeId::of::<PingRsp>());
-
-    println!("          ba_other.type_id={:?}", ba_other.type_id());
-    println!("       (*ba_other).type_id={:?}", (*ba_other).type_id());
-    println!("      (&*ba_other).type_id={:?}", (&*ba_other).type_id());
-
-    // But they all return the same as this:
-    println!("TypeId::of::<Other>={:?}", TypeId::of::<Other>());
-
-    // So using Box<Any> via as_boxed_any() on the message allows me
-    // to discriminates properly but we lose the Box and the
-    // `if {} else fi {} else {}` doesn't look pretty.
-    fn process_box_dyn_any(ba: &Box<dyn std::any::Any>) {
-        // I couldn't get `from_any` working and this explanation
-        // if probably wrong, but either way `from_any` isn't working for me.
-        //
-        // So, trying to use `from_any` doesn't work because we consume it:
-        //    `if let Some(box_ping_req) = PingReq::from_any(ba_ping_req) {`
-        // And trying to pass a reference doesn't work because we want to move it out :(
-        //    `if let Some(box_ping_req) = PingReq::from_any(&ba_ping_req) {`
-        // But doing downcast_ref we can handle any type of message, directly
-        // here, but if we wan't to voe it we run into the same problem as
-        // trying to to use `from_any`.
-        if let Some(ping_req) = ba.downcast_ref::<PingReq>() {
-            println!("Yes, ba: {ba:?} is a &PingReq: {ping_req:?}");
-        } else if let Some(ping_rsp) = ba.downcast_ref::<PingRsp>() {
-            println!("Yes, ba: {ba:?} is a &PingRsp: {ping_rsp:?}");
-        } else {
-            println!("Not, ping_req or ping_rsp");
-        }
-    }
-
-    process_box_dyn_any(&ba_ping_req);
-    process_box_dyn_any(&ba_ping_rsp);
-    process_box_dyn_any(&ba_other);
+    let other = Other::new();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(other));
 }
