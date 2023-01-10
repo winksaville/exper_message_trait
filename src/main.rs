@@ -1,15 +1,17 @@
+use crossbeam_channel::{unbounded, Sender};
 use std::{any::Any, time::Instant};
-//use crossbeam_channel::unbounded;
 
 #[derive(Debug, Clone)]
 pub struct PingReq {
+    pub tx: Sender<Box<dyn Any>>,
     pub id: u64,
     pub instant: Instant,
 }
 
 impl PingReq {
-    fn new(id: u64) -> Self {
+    fn new(tx: Sender<Box<dyn Any>>, id: u64) -> Self {
         Self {
+            tx,
             id,
             instant: Instant::now(),
         }
@@ -76,6 +78,9 @@ impl MySm {
         if let Some(msg) = msg.downcast_ref::<PingReq>() {
             println!("state1: msg={msg:?}");
             self.f1 += msg.id as i128;
+
+            let reply_msg = PingRsp::new(2, msg);
+            _ = msg.tx.send(Box::new(reply_msg));
         } else if let Some(msg) = msg.downcast_ref::<PingRsp>() {
             println!("state1: msg={msg:?}");
             self.f1 -= msg.id as i128;
@@ -90,9 +95,12 @@ impl MySm {
         if let Some(msg) = msg.downcast_ref::<PingReq>() {
             println!("state2: msg={msg:?}");
             self.f1 -= msg.id as i128;
+
+            let reply_msg = PingRsp::new(2, msg);
+            _ = msg.tx.send(Box::new(reply_msg));
         } else if let Some(msg) = msg.downcast_ref::<PingRsp>() {
             println!("state2: msg={msg:?}");
-            self.f1 += msg.id as i128;
+            self.f1 -= msg.id as i128;
         } else {
             println!("state2: Unknown msg type={:?}", msg.type_id());
         }
@@ -111,14 +119,33 @@ impl<MySM> DispatchMsg<MySM> for MySm {
 }
 
 fn main() {
+    let (tx, rx) = unbounded::<Box<dyn Any>>();
+
     let mut mysm = MySm::new(123);
 
-    let ping_req = PingReq::new(1);
-    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(ping_req.clone()));
+    // Send/Recv PingReq dispatch
+    let msg = PingReq::new(tx.clone(), 1);
+    tx.send(Box::new(msg)).unwrap();
+    let recv_msg = rx.recv().unwrap();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, recv_msg);
 
-    let ping_rsp = PingRsp::new(1, &ping_req);
-    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(ping_rsp));
+    // Recv PingRsp dispatch
+    let recv_msg = rx.recv().unwrap();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, recv_msg);
 
+    // Send/Recv second PingReq dispatch
+    let msg = PingReq::new(tx.clone(), 1);
+    tx.send(Box::new(msg)).unwrap();
+    let recv_msg = rx.recv().unwrap();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, recv_msg);
+
+    // Recv PingRsp dispatch
+    let recv_msg = rx.recv().unwrap();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, recv_msg);
+
+    // Send/Recv Other dispatch
     let other = Other::new();
-    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, Box::new(other));
+    tx.send(Box::new(other)).unwrap();
+    let recv_msg = rx.recv().unwrap();
+    <MySm as DispatchMsg<MySm>>::dispatch_msg(&mut mysm, recv_msg);
 }
