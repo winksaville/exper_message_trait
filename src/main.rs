@@ -1,31 +1,24 @@
-use std::any::Any;
+use exper_message_trait::Message;
 
 #[derive(Debug)]
-enum Message {
+enum Messages {
     Quit,
     Move { x: i32, y: i32 },
     Write(String),
 }
 
-impl Message {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-
 fn main() {
-    let binding = Message::Write(String::from("Hello, world!"));
-    let messages: Vec<&dyn Any> = vec![
-        Message::Quit.as_any(),
-        Message::Move { x: 10, y: 20 }.as_any(),
-        binding.as_any(),
+    let messages: Vec<Box<Message>> = vec![
+        Box::new(Messages::Quit),
+        Box::new(Messages::Move { x: 10, y: 20 }),
+        Box::new(Messages::Write(String::from("Hello, world!"))),
     ];
 
     for message_any in messages {
-        match message_any.downcast_ref::<Message>() {
-            Some(Message::Quit) => println!("Received Quit message"),
-            Some(Message::Move { x, y }) => println!("Received Move message: ({}, {})", x, y),
-            Some(Message::Write(s)) => println!("Received Write message: {}", s),
+        match message_any.downcast_ref::<Messages>() {
+            Some(Messages::Quit) => println!("Received Quit message"),
+            Some(Messages::Move { x, y }) => println!("Received Move message: ({}, {})", x, y),
+            Some(Messages::Write(s)) => println!("Received Write message: {}", s),
             None => println!("Received unknown message"),
         }
     }

@@ -1,42 +1,48 @@
 # Experiment with message trait
 
-I [asked ChatGPT](https://chat.openai.com/chat/43127a48-08e0-4503-86eb-cb309ba89214)
-to help me using traits as messages and this is what we came up with:
+Based on a [ChatGPT conversation](https://chat.openai.com/chat/43127a48-08e0-4503-86eb-cb309ba89214).
+
+Refactor and simplify. Create `lib.rs` with the `Message` type definition of
+`Message = dyn Any`. And in `main.rs` removed the `as_any` trait function.
+
+lib.rs:
 
 ```
+$ cat -n src/lib.rs
+     1	// Message as a `dyn Any` trait
+     2	use std::any::Any;
+     3	
+     4	pub type Message = dyn Any;
+```
+
+main.rs:
+```
 $ cat -n src/main.rs
-     1	use std::any::Any;
+     1	use exper_message_trait::Message;
      2	
      3	#[derive(Debug)]
-     4	enum Message {
+     4	enum Messages {
      5	    Quit,
      6	    Move { x: i32, y: i32 },
      7	    Write(String),
      8	}
      9	
-    10	impl Message {
-    11	    fn as_any(&self) -> &dyn Any {
-    12	        self
-    13	    }
-    14	}
-    15	
-    16	fn main() {
-    17	    let binding = Message::Write(String::from("Hello, world!"));
-    18	    let messages: Vec<&dyn Any> = vec![
-    19	        Message::Quit.as_any(),
-    20	        Message::Move { x: 10, y: 20 }.as_any(),
-    21	        binding.as_any(),
-    22	    ];
-    23	
-    24	    for message_any in messages {
-    25	        match message_any.downcast_ref::<Message>() {
-    26	            Some(Message::Quit) => println!("Received Quit message"),
-    27	            Some(Message::Move { x, y }) => println!("Received Move message: ({}, {})", x, y),
-    28	            Some(Message::Write(s)) => println!("Received Write message: {}", s),
-    29	            None => println!("Received unknown message"),
-    30	        }
-    31	    }
-    32	}
+    10	fn main() {
+    11	    let messages: Vec<Box<Message>> = vec![
+    12	        Box::new(Messages::Quit),
+    13	        Box::new(Messages::Move { x: 10, y: 20 }),
+    14	        Box::new(Messages::Write(String::from("Hello, world!"))),
+    15	    ];
+    16	
+    17	    for message_any in messages {
+    18	        match message_any.downcast_ref::<Messages>() {
+    19	            Some(Messages::Quit) => println!("Received Quit message"),
+    20	            Some(Messages::Move { x, y }) => println!("Received Move message: ({}, {})", x, y),
+    21	            Some(Messages::Write(s)) => println!("Received Write message: {}", s),
+    22	            None => println!("Received unknown message"),
+    23	        }
+    24	    }
+    25	}
 ```
 
 ## Run:
@@ -44,7 +50,7 @@ $ cat -n src/main.rs
 ```
 $ cargo run
    Compiling exper_message_trait v0.1.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.29s
+    Finished dev [unoptimized + debuginfo] target(s) in 0.18s
      Running `target/debug/exper_message_trait`
 Received Quit message
 Received Move message: (10, 20)
