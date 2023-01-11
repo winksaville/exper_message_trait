@@ -5,7 +5,7 @@ mod sm_enum_messages;
 use sm_enum_messages::{Messages, SmEnumMessages};
 
 mod sm_individual_messages;
-use sm_individual_messages::{Move, Quit, Write, SmIndividualMessages};
+use sm_individual_messages::{Move, Quit, SmIndividualMessages, Write};
 
 fn run_enum() {
     let (tx, rx) = channel::<Box<Message>>();

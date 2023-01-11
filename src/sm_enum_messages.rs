@@ -35,23 +35,28 @@ pub struct SmEnumMessages {
 impl Debug for SmEnumMessages {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SmEnumMessages")
-         //.field("current_state", &self.current_state)
-         .field("state0_counter", &self.state0_counter)
-         .field("state0_quit_counter", &self.state0_quit_counter)
-         .field("state0_move_counter", &self.state0_move_counter)
-         .field("state0_move_xy_counter", &self.state0_move_xy_counter)
-         .field("state0_write_counter", &self.state0_write_counter)
-         .field("state0_write_sum_len_s_counter", &self.state0_write_sum_len_s)
-         .field("state0_none_counter", &self.state0_none_counter)
-
-         .field("state1_counter", &self.state1_counter)
-         .field("state1_quit_counter", &self.state1_quit_counter)
-         .field("state1_move_counter", &self.state1_move_counter)
-         .field("state1_move_xy_counter", &self.state1_move_xy_counter)
-         .field("state1_write_counter", &self.state1_write_counter)
-         .field("state1_write_sum_len_s_counter", &self.state1_write_sum_len_s)
-         .field("state1_none_counter", &self.state1_none_counter)
-         .finish()
+            //.field("current_state", &self.current_state)
+            .field("state0_counter", &self.state0_counter)
+            .field("state0_quit_counter", &self.state0_quit_counter)
+            .field("state0_move_counter", &self.state0_move_counter)
+            .field("state0_move_xy_counter", &self.state0_move_xy_counter)
+            .field("state0_write_counter", &self.state0_write_counter)
+            .field(
+                "state0_write_sum_len_s_counter",
+                &self.state0_write_sum_len_s,
+            )
+            .field("state0_none_counter", &self.state0_none_counter)
+            .field("state1_counter", &self.state1_counter)
+            .field("state1_quit_counter", &self.state1_quit_counter)
+            .field("state1_move_counter", &self.state1_move_counter)
+            .field("state1_move_xy_counter", &self.state1_move_xy_counter)
+            .field("state1_write_counter", &self.state1_write_counter)
+            .field(
+                "state1_write_sum_len_s_counter",
+                &self.state1_write_sum_len_s,
+            )
+            .field("state1_none_counter", &self.state1_none_counter)
+            .finish()
     }
 }
 
@@ -88,7 +93,8 @@ impl SmEnumMessages {
             Some(Messages::Quit) => self.state0_quit_counter += 1,
             Some(Messages::Move { x, y }) => {
                 self.state0_move_counter += 1;
-                self.state0_move_xy_counter += x.abs() as usize + y.abs() as usize;
+                self.state0_move_xy_counter +=
+                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
             }
             Some(Messages::Write(s)) => {
                 self.state0_write_counter += 1;
@@ -106,7 +112,8 @@ impl SmEnumMessages {
             Some(Messages::Quit) => self.state1_quit_counter += 1,
             Some(Messages::Move { x, y }) => {
                 self.state1_move_counter += 1;
-                self.state1_move_xy_counter += x.abs() as usize + y.abs() as usize;
+                self.state1_move_xy_counter +=
+                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
             }
             Some(Messages::Write(s)) => {
                 self.state1_write_counter += 1;

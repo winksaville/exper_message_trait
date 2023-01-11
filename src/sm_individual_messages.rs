@@ -40,23 +40,28 @@ pub struct SmIndividualMessages {
 impl Debug for SmIndividualMessages {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SmIndividualMessages")
-         //.field("current_state", &self.current_state)
-         .field("state0_counter", &self.state0_counter)
-         .field("state0_quit_counter", &self.state0_quit_counter)
-         .field("state0_move_counter", &self.state0_move_counter)
-         .field("state0_move_xy_counter", &self.state0_move_xy_counter)
-         .field("state0_write_counter", &self.state0_write_counter)
-         .field("state0_write_sum_len_s_counter", &self.state0_write_sum_len_s)
-         .field("state0_none_counter", &self.state0_none_counter)
-
-         .field("state1_counter", &self.state1_counter)
-         .field("state1_quit_counter", &self.state1_quit_counter)
-         .field("state1_move_counter", &self.state1_move_counter)
-         .field("state1_move_xy_counter", &self.state1_move_xy_counter)
-         .field("state1_write_counter", &self.state1_write_counter)
-         .field("state1_write_sum_len_s_counter", &self.state1_write_sum_len_s)
-         .field("state1_none_counter", &self.state1_none_counter)
-         .finish()
+            //.field("current_state", &self.current_state)
+            .field("state0_counter", &self.state0_counter)
+            .field("state0_quit_counter", &self.state0_quit_counter)
+            .field("state0_move_counter", &self.state0_move_counter)
+            .field("state0_move_xy_counter", &self.state0_move_xy_counter)
+            .field("state0_write_counter", &self.state0_write_counter)
+            .field(
+                "state0_write_sum_len_s_counter",
+                &self.state0_write_sum_len_s,
+            )
+            .field("state0_none_counter", &self.state0_none_counter)
+            .field("state1_counter", &self.state1_counter)
+            .field("state1_quit_counter", &self.state1_quit_counter)
+            .field("state1_move_counter", &self.state1_move_counter)
+            .field("state1_move_xy_counter", &self.state1_move_xy_counter)
+            .field("state1_write_counter", &self.state1_write_counter)
+            .field(
+                "state1_write_sum_len_s_counter",
+                &self.state1_write_sum_len_s,
+            )
+            .field("state1_none_counter", &self.state1_none_counter)
+            .finish()
     }
 }
 
@@ -89,11 +94,12 @@ impl SmIndividualMessages {
 
     pub fn state0(&mut self, msg: Box<Message>) {
         self.state0_counter += 1;
-        if let Some(_) = msg.downcast_ref::<Quit>() {
+        if msg.downcast_ref::<Quit>().is_some() {
             self.state0_quit_counter += 1;
         } else if let Some(mm) = msg.downcast_ref::<Move>() {
             self.state0_move_counter += 1;
-            self.state0_move_xy_counter += mm.x.abs() as usize + mm.y.abs() as usize;
+            self.state0_move_xy_counter +=
+                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
         } else if let Some(mw) = msg.downcast_ref::<Write>() {
             self.state0_write_counter += 1;
             self.state0_write_sum_len_s += mw.0.len();
@@ -106,11 +112,12 @@ impl SmIndividualMessages {
 
     pub fn state1(&mut self, msg: Box<Message>) {
         self.state1_counter += 1;
-        if let Some(_) = msg.downcast_ref::<Quit>() {
+        if msg.downcast_ref::<Quit>().is_some() {
             self.state1_quit_counter += 1;
         } else if let Some(mm) = msg.downcast_ref::<Move>() {
             self.state1_move_counter += 1;
-            self.state1_move_xy_counter += mm.x.abs() as usize + mm.y.abs() as usize;
+            self.state1_move_xy_counter +=
+                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
         } else if let Some(mw) = msg.downcast_ref::<Write>() {
             self.state1_write_counter += 1;
             self.state1_write_sum_len_s += mw.0.len();

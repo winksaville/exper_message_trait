@@ -1,10 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion, PlotConfiguration};
 
-
 use exper_message_trait::{
-    sm_individual_messages::{Move, Quit, Write, SmIndividualMessages},
     sm_enum_messages::{Messages, SmEnumMessages},
-    ProcessMsg
+    sm_individual_messages::{Move, Quit, SmIndividualMessages, Write},
+    ProcessMsg,
 };
 
 #[allow(unused)]
@@ -18,7 +17,6 @@ fn bench_sm_enum_messages(c: &mut Criterion) {
 
     group.bench_function("sm_enum_messages", |b| {
         //println!("bench:+");
-
 
         let mut sm = SmEnumMessages::new(SmEnumMessages::state0);
 
@@ -78,6 +76,9 @@ fn bench_sm_individual_messages(c: &mut Criterion) {
     //println!("bench_sm_enum_messages:-");
 }
 
-criterion_group!(benches, bench_sm_enum_messages, bench_sm_individual_messages);
-//criterion_group!(benches, bench_sm_individual_messages, bench_sm_enum_messages);
+criterion_group!(
+    benches,
+    bench_sm_enum_messages,
+    bench_sm_individual_messages
+);
 criterion_main!(benches);
