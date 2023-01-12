@@ -1,19 +1,24 @@
-use crate::{Message, ProcessMsg};
+use crate::{MsgAny, ProcessMsgAny};
 use std::fmt::{self, Debug};
 
 // Why do I have to declare a type alias here, I'd like to `use` it?
 //    use crate::SmProcessMsgFn;
-pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<Message>);
+pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<MsgAny>);
 
 #[derive(Debug, Clone)]
-#[allow(unused)]
-pub enum Messages {
-    Quit,
-    Move { x: i32, y: i32 },
-    Write(String),
+pub struct Quit;
+
+#[derive(Debug, Clone)]
+pub struct Move {
+    pub x: i32,
+    pub y: i32,
 }
 
-pub struct SmEnumMessages {
+#[derive(Debug, Clone)]
+pub struct Write(pub String);
+
+//#[derive(Debug)]
+pub struct SmIndividualMsgsAny {
     current_state: SmProcessMsgFn<Self>,
     pub state0_counter: usize,
     pub state0_quit_counter: usize,
@@ -32,9 +37,9 @@ pub struct SmEnumMessages {
     pub state1_none_counter: usize,
 }
 
-impl Debug for SmEnumMessages {
+impl Debug for SmIndividualMsgsAny {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SmEnumMessages")
+        f.debug_struct("SmIndividualMsgsAny")
             //.field("current_state", &self.current_state)
             .field("state0_counter", &self.state0_counter)
             .field("state0_quit_counter", &self.state0_quit_counter)
@@ -61,7 +66,7 @@ impl Debug for SmEnumMessages {
 }
 
 #[allow(unused)]
-impl SmEnumMessages {
+impl SmIndividualMsgsAny {
     pub fn new(initial_state: SmProcessMsgFn<Self>) -> Self {
         Self {
             current_state: initial_state,
@@ -87,47 +92,45 @@ impl SmEnumMessages {
         self.current_state = dest;
     }
 
-    pub fn state0(&mut self, msg: Box<Message>) {
+    pub fn state0(&mut self, msg: Box<MsgAny>) {
         self.state0_counter += 1;
-        match msg.downcast_ref::<Messages>() {
-            Some(Messages::Quit) => self.state0_quit_counter += 1,
-            Some(Messages::Move { x, y }) => {
-                self.state0_move_counter += 1;
-                self.state0_move_xy_counter +=
-                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
-            }
-            Some(Messages::Write(s)) => {
-                self.state0_write_counter += 1;
-                self.state0_write_sum_len_s += s.len();
-            }
-            None => self.state0_none_counter += 1,
+        if msg.downcast_ref::<Quit>().is_some() {
+            self.state0_quit_counter += 1;
+        } else if let Some(mm) = msg.downcast_ref::<Move>() {
+            self.state0_move_counter += 1;
+            self.state0_move_xy_counter +=
+                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
+        } else if let Some(mw) = msg.downcast_ref::<Write>() {
+            self.state0_write_counter += 1;
+            self.state0_write_sum_len_s += mw.0.len();
+        } else {
+            self.state0_none_counter += 1;
         }
 
-        self.transition(SmEnumMessages::state1);
+        self.transition(SmIndividualMsgsAny::state1);
     }
 
-    pub fn state1(&mut self, msg: Box<Message>) {
+    pub fn state1(&mut self, msg: Box<MsgAny>) {
         self.state1_counter += 1;
-        match msg.downcast_ref::<Messages>() {
-            Some(Messages::Quit) => self.state1_quit_counter += 1,
-            Some(Messages::Move { x, y }) => {
-                self.state1_move_counter += 1;
-                self.state1_move_xy_counter +=
-                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
-            }
-            Some(Messages::Write(s)) => {
-                self.state1_write_counter += 1;
-                self.state1_write_sum_len_s += s.len();
-            }
-            None => self.state1_none_counter += 1,
+        if msg.downcast_ref::<Quit>().is_some() {
+            self.state1_quit_counter += 1;
+        } else if let Some(mm) = msg.downcast_ref::<Move>() {
+            self.state1_move_counter += 1;
+            self.state1_move_xy_counter +=
+                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
+        } else if let Some(mw) = msg.downcast_ref::<Write>() {
+            self.state1_write_counter += 1;
+            self.state1_write_sum_len_s += mw.0.len();
+        } else {
+            self.state1_none_counter += 1;
         }
 
-        self.transition(SmEnumMessages::state0);
+        self.transition(SmIndividualMsgsAny::state0);
     }
 }
 
-impl ProcessMsg for SmEnumMessages {
-    fn process_msg(&mut self, msg: Box<Message>) {
+impl ProcessMsgAny for SmIndividualMsgsAny {
+    fn process_msg_any(&mut self, msg: Box<MsgAny>) {
         (self.current_state)(self, msg);
     }
 }
