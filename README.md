@@ -1,6 +1,8 @@
 # Experiment with message trait
 
-Based on a [ChatGPT conversation](https://chat.openai.com/chat/43127a48-08e0-4503-86eb-cb309ba89214).
+Based on a ChatGPT conversation, the original chat is gone, but
+see [examples/chatgpt_code.md](/examples/chatgpt_code.md) for
+a little more information.
 
 The project show 3 styles for sending messages to "actors". Here these
 actors here are implemented as simple state machines and are sent
@@ -24,6 +26,10 @@ Here are the relavent files:
  * [sm_individual_msgs_any.rs](/src/sm_individual_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
  * [main.rs](/src/main.rs), a main which runs all three types.
  * [crit.rs](/benches/crit.rs), benchmarks.
+
+## Examples
+
+  * [examples](/examples/README.md)
 
 ## Run:
 
