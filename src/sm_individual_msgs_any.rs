@@ -1,5 +1,8 @@
 use crate::{MsgAny, ProcessMsgAny};
-use std::fmt::{self, Debug};
+use std::{
+    fmt::{self, Debug},
+    num::Wrapping,
+};
 
 // Why do I have to declare a type alias here, I'd like to `use` it?
 //    use crate::SmProcessMsgFn;
@@ -10,8 +13,8 @@ pub struct Quit;
 
 #[derive(Debug, Clone)]
 pub struct Move {
-    pub x: i32,
-    pub y: i32,
+    pub x: Wrapping<i32>,
+    pub y: Wrapping<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -23,7 +26,7 @@ pub struct SmIndividualMsgsAny {
     pub state0_counter: usize,
     pub state0_quit_counter: usize,
     pub state0_move_counter: usize,
-    pub state0_move_xy_counter: usize,
+    pub state0_move_xy_counter: Wrapping<i32>,
     pub state0_write_counter: usize,
     pub state0_write_sum_len_s: usize,
     pub state0_none_counter: usize,
@@ -31,7 +34,7 @@ pub struct SmIndividualMsgsAny {
     pub state1_counter: usize,
     pub state1_quit_counter: usize,
     pub state1_move_counter: usize,
-    pub state1_move_xy_counter: usize,
+    pub state1_move_xy_counter: Wrapping<i32>,
     pub state1_write_counter: usize,
     pub state1_write_sum_len_s: usize,
     pub state1_none_counter: usize,
@@ -73,7 +76,7 @@ impl SmIndividualMsgsAny {
             state0_counter: 0,
             state0_quit_counter: 0,
             state0_move_counter: 0,
-            state0_move_xy_counter: 0,
+            state0_move_xy_counter: Wrapping(0),
             state0_write_counter: 0,
             state0_write_sum_len_s: 0,
             state0_none_counter: 0,
@@ -81,7 +84,7 @@ impl SmIndividualMsgsAny {
             state1_counter: 0,
             state1_quit_counter: 0,
             state1_move_counter: 0,
-            state1_move_xy_counter: 0,
+            state1_move_xy_counter: Wrapping(0),
             state1_write_counter: 0,
             state1_write_sum_len_s: 0,
             state1_none_counter: 0,
@@ -98,8 +101,7 @@ impl SmIndividualMsgsAny {
             self.state0_quit_counter += 1;
         } else if let Some(mm) = msg.downcast_ref::<Move>() {
             self.state0_move_counter += 1;
-            self.state0_move_xy_counter +=
-                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
+            self.state0_move_xy_counter += mm.x + mm.y;
         } else if let Some(mw) = msg.downcast_ref::<Write>() {
             self.state0_write_counter += 1;
             self.state0_write_sum_len_s += mw.0.len();
@@ -116,8 +118,7 @@ impl SmIndividualMsgsAny {
             self.state1_quit_counter += 1;
         } else if let Some(mm) = msg.downcast_ref::<Move>() {
             self.state1_move_counter += 1;
-            self.state1_move_xy_counter +=
-                mm.x.unsigned_abs() as usize + mm.y.unsigned_abs() as usize;
+            self.state1_move_xy_counter += mm.x + mm.y;
         } else if let Some(mw) = msg.downcast_ref::<Write>() {
             self.state1_write_counter += 1;
             self.state1_write_sum_len_s += mw.0.len();

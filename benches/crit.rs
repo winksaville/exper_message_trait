@@ -1,3 +1,5 @@
+use std::num::Wrapping;
+
 use criterion::{criterion_group, criterion_main, Criterion, PlotConfiguration};
 
 use exper_message_trait::{
@@ -21,21 +23,25 @@ fn bench_sm_enum_msgs(c: &mut Criterion) {
 
         let mut sm = SmEnumMsgs::new(SmEnumMsgs::state0);
 
-        let mm = Msgs::Move { x: 1, y: 2 };
-        let mw = Msgs::Write("Hi".to_owned());
-        let mq = Msgs::Quit;
-        let bmm = Box::new(mm);
-        let bmw = Box::new(mw);
-        let bmq = Box::new(mq);
-
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
         b.iter(|| {
             //println!("b.iter:  Send Start");
 
-            sm.process_msg(bmm.clone());
-            sm.process_msg(bmw.clone());
-            sm.process_msg(bmq.clone());
-        });
+            x += 1;
+            y += 1;
+            let mm = Msgs::Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg(bmm);
 
+            let mw = Msgs::Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg(bmw);
+
+            let mq = Msgs::Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg(bmq);
+        });
         //println!("bench:-");
     });
 
@@ -56,19 +62,24 @@ fn bench_sm_enum_msgs_any(c: &mut Criterion) {
 
         let mut sm = SmEnumMsgsAny::new(SmEnumMsgsAny::state0);
 
-        let mm = Messages::Move { x: 1, y: 2 };
-        let mw = Messages::Write("Hi".to_owned());
-        let mq = Messages::Quit;
-        let bmm = Box::new(mm);
-        let bmw = Box::new(mw);
-        let bmq = Box::new(mq);
-
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
         b.iter(|| {
             //println!("b.iter:  Send Start");
 
-            sm.process_msg_any(bmm.clone());
-            sm.process_msg_any(bmw.clone());
-            sm.process_msg_any(bmq.clone());
+            x += 1;
+            y += 1;
+            let mm = Messages::Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg_any(bmm);
+
+            let mw = Messages::Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg_any(bmw);
+
+            let mq = Messages::Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg_any(bmq);
         });
 
         //println!("bench:-");
@@ -91,19 +102,24 @@ fn bench_sm_individual_msgs_any(c: &mut Criterion) {
 
         let mut sm = SmIndividualMsgsAny::new(SmIndividualMsgsAny::state0);
 
-        let mm = Move { x: 1, y: 2 };
-        let mw = Write("Hi".to_owned());
-        let mq = Quit;
-        let bmm = Box::new(mm);
-        let bmw = Box::new(mw);
-        let bmq = Box::new(mq);
-
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
         b.iter(|| {
             //println!("b.iter:  Send Start");
 
-            sm.process_msg_any(bmm.clone());
-            sm.process_msg_any(bmw.clone());
-            sm.process_msg_any(bmq.clone());
+            x += 1;
+            y += 1;
+            let mm = Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg_any(bmm);
+
+            let mw = Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg_any(bmw);
+
+            let mq = Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg_any(bmq);
         });
 
         //println!("bench:-");

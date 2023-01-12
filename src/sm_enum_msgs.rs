@@ -1,4 +1,7 @@
-use std::fmt::{self, Debug};
+use std::{
+    fmt::{self, Debug},
+    num::Wrapping,
+};
 
 // Dispatch a message
 pub trait ProcessMsg<Msg> {
@@ -11,7 +14,7 @@ pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<Msgs>);
 #[allow(unused)]
 pub enum Msgs {
     Quit,
-    Move { x: i32, y: i32 },
+    Move { x: Wrapping<i32>, y: Wrapping<i32> },
     Write(String),
 }
 
@@ -20,7 +23,7 @@ pub struct SmEnumMsgs {
     pub state0_counter: usize,
     pub state0_quit_counter: usize,
     pub state0_move_counter: usize,
-    pub state0_move_xy_counter: usize,
+    pub state0_move_xy_counter: Wrapping<i32>,
     pub state0_write_counter: usize,
     pub state0_write_sum_len_s: usize,
     pub state0_none_counter: usize,
@@ -28,7 +31,7 @@ pub struct SmEnumMsgs {
     pub state1_counter: usize,
     pub state1_quit_counter: usize,
     pub state1_move_counter: usize,
-    pub state1_move_xy_counter: usize,
+    pub state1_move_xy_counter: Wrapping<i32>,
     pub state1_write_counter: usize,
     pub state1_write_sum_len_s: usize,
     pub state1_none_counter: usize,
@@ -70,7 +73,7 @@ impl SmEnumMsgs {
             state0_counter: 0,
             state0_quit_counter: 0,
             state0_move_counter: 0,
-            state0_move_xy_counter: 0,
+            state0_move_xy_counter: Wrapping(0),
             state0_write_counter: 0,
             state0_write_sum_len_s: 0,
             state0_none_counter: 0,
@@ -78,7 +81,7 @@ impl SmEnumMsgs {
             state1_counter: 0,
             state1_quit_counter: 0,
             state1_move_counter: 0,
-            state1_move_xy_counter: 0,
+            state1_move_xy_counter: Wrapping(0),
             state1_write_counter: 0,
             state1_write_sum_len_s: 0,
             state1_none_counter: 0,
@@ -96,8 +99,7 @@ impl SmEnumMsgs {
             Msgs::Quit => self.state0_quit_counter += 1,
             Msgs::Move { x, y } => {
                 self.state0_move_counter += 1;
-                self.state0_move_xy_counter +=
-                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
+                self.state0_move_xy_counter += x + y;
             }
             Msgs::Write(s) => {
                 self.state0_write_counter += 1;
@@ -115,8 +117,7 @@ impl SmEnumMsgs {
             Msgs::Quit => self.state1_quit_counter += 1,
             Msgs::Move { x, y } => {
                 self.state1_move_counter += 1;
-                self.state1_move_xy_counter +=
-                    x.unsigned_abs() as usize + y.unsigned_abs() as usize;
+                self.state1_move_xy_counter += x + y;
             }
             Msgs::Write(s) => {
                 self.state1_write_counter += 1;

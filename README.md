@@ -23,12 +23,13 @@ Here are the relavent files:
  * [sm_enum_msgs_any.rs](/src/sm_enum_msgs_any.rs), enum msgs passed via `dyn Any`.
  * [sm_individual_msgs_any.rs](/src/sm_individual_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
  * [main.rs](/src/main.rs), a main which runs all three types.
+ * [crit.rs](/benches/crit.rs), benchmarks.
 
 ## Run:
 
 ```
 $ cargo run
-    Finished dev [unoptimized + debuginfo] target(s) in 0.17s
+    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
      Running `target/debug/exper_message_trait`
 mysm: SmEnumMsgs {
     state0_counter: 2,
@@ -86,30 +87,32 @@ There are thee benchmarks and `sm_enum_msgs`, `sm_enum_msgs_any` and `sm_individ
 They similar in perforamnce except `sm_enum_msgs_any` is about 20% slower. At this
 time I wouldn't bet the house on any of these benchmarks, but its an indicator.
 
+Note: See issue #1
+
 ```
 $ taskset -c 0 cargo criterion
-    Finished bench [optimized] target(s) in 0.03s
+   Compiling exper_message_trait v0.6.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
+    Finished bench [optimized] target(s) in 4.43s
 sm_enum_msgs/sm_enum_msgs                                                                             
-                        time:   [49.545 ns 49.621 ns 49.704 ns]
-                        change: [-0.5837% -0.2445% +0.0661%] (p = 0.14 > 0.05)
-                        No change in performance detected.
+                        time:   [39.594 ns 39.640 ns 39.703 ns]
+                        change: [-2.8152% -1.8758% -1.0715%] (p = 0.00 < 0.05)
+                        Performance has improved.
 
-sm_enum_msgs_any/sm_enum_msgs_any                                                                            
-                        time:   [60.113 ns 60.203 ns 60.299 ns]
-                        change: [+0.0760% +0.4576% +0.8906%] (p = 0.03 < 0.05)
-                        Change within noise threshold.
+sm_enum_msgs_any/sm_enum_msgs_any                                                                             
+                        time:   [47.733 ns 47.897 ns 48.054 ns]
+                        change: [+4.4202% +6.6664% +8.4494%] (p = 0.00 < 0.05)
+                        Performance has regressed.
 
-sm_individual_msgs_any/sm_individual_msgs_any                                                                            
-                        time:   [50.664 ns 50.764 ns 50.863 ns]
-                        change: [+0.9387% +1.5202% +2.1052%] (p = 0.00 < 0.05)
-                        Change within noise threshold.
+sm_individual_msgs_any/sm_individual_msgs_any                                                                             
+                        time:   [42.486 ns 42.540 ns 42.597 ns]
+                        change: [+1.8950% +2.6158% +3.1267%] (p = 0.00 < 0.05)
+                        Performance has regressed.
 
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
-
 
 ## License
 

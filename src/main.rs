@@ -1,5 +1,5 @@
 use exper_message_trait::{MsgAny, ProcessMsgAny};
-use std::sync::mpsc::channel;
+use std::{num::Wrapping, sync::mpsc::channel};
 
 mod sm_enum_msgs_any;
 use sm_enum_msgs_any::{Messages, SmEnumMsgsAny};
@@ -22,7 +22,10 @@ fn run_enum_msgs() {
     mysm.process_msg(msg);
 
     // Send Move msg, receive it and then process it to mysm
-    _ = tx.send(Box::new(Msgs::Move { x: 1, y: 2 }));
+    _ = tx.send(Box::new(Msgs::Move {
+        x: Wrapping(1),
+        y: Wrapping(2),
+    }));
     let msg = rx.recv().unwrap();
     mysm.process_msg(msg);
 
@@ -51,7 +54,10 @@ fn run_enum_messages() {
     mysm.process_msg_any(msg);
 
     // Send Move msg, receive it and then process it to mysm
-    _ = tx.send(Box::new(Messages::Move { x: 1, y: 2 }));
+    _ = tx.send(Box::new(Messages::Move {
+        x: Wrapping(1),
+        y: Wrapping(2),
+    }));
     let msg = rx.recv().unwrap();
     mysm.process_msg_any(msg);
 
@@ -80,7 +86,10 @@ fn run_individual_messages() {
     mysm.process_msg_any(msg);
 
     // Send Move msg, receive it and then process it to mysm
-    _ = tx.send(Box::new(Move { x: 1, y: 2 }));
+    _ = tx.send(Box::new(Move {
+        x: Wrapping(1),
+        y: Wrapping(2),
+    }));
     let msg = rx.recv().unwrap();
     mysm.process_msg_any(msg);
 
