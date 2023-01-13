@@ -16,3 +16,4 @@ pub trait ProcessMsgAny {
 pub mod sm_enum_msgs;
 pub mod sm_enum_msgs_any;
 pub mod sm_individual_msgs_any;
+pub mod sm_string_msgs;

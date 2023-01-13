@@ -21,6 +21,7 @@ hit when using `enum`'s and `dyn Any`.
 
 Here are the relavent files:
  * [lib.rs](/src/lib.rs)
+ * [sm_string_msgs.rs](/src/sm_string_msgs.rs), msgs passed as `String`.
  * [sm_enum_msgs.rs](/src/sm_enum_msgs.rs), msgs passed `as-is`
  * [sm_enum_msgs_any.rs](/src/sm_enum_msgs_any.rs), enum msgs passed via `dyn Any`.
  * [sm_individual_msgs_any.rs](/src/sm_individual_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
@@ -35,8 +36,25 @@ Here are the relavent files:
 
 ```
 $ cargo run
-    Finished dev [unoptimized + debuginfo] target(s) in 0.01s
+   Compiling exper_message_trait v0.8.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.64s
      Running `target/debug/exper_message_trait`
+mysm: SmStringMsgs {
+    state0_counter: 2,
+    state0_quit_counter: 0,
+    state0_move_counter: 0,
+    state0_move_xy_counter: 0,
+    state0_write_counter: 2,
+    state0_write_sum_len_s_counter: 22,
+    state0_none_counter: 0,
+    state1_counter: 2,
+    state1_quit_counter: 1,
+    state1_move_counter: 1,
+    state1_move_xy_counter: 3,
+    state1_write_counter: 0,
+    state1_write_sum_len_s_counter: 0,
+    state1_none_counter: 0,
+}
 mysm: SmEnumMsgs {
     state0_counter: 2,
     state0_quit_counter: 0,
@@ -89,30 +107,34 @@ mysm: SmIndividualMsgsAny {
 
 ## Benchmarks:
 
-There are thee benchmarks and `sm_enum_msgs`, `sm_enum_msgs_any` and `sm_individual_msgs_any`.
-They similar in perforamnce except `sm_enum_msgs_any` is about 20% slower. At this
+There are four benchmarks `sm_string_msgs`, `sm_enum_msgs`, `sm_enum_msgs_any` and `sm_individual_msgs_any`.
+They similar in perforamnce except `sm_string_msgs` is about 20x slower. At this
 time I wouldn't bet the house on any of these benchmarks, but its an indicator.
 
 Note: See issue #1
 
 ```
 $ taskset -c 0 cargo criterion
-   Compiling exper_message_trait v0.6.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
-    Finished bench [optimized] target(s) in 4.43s
+    Finished bench [optimized] target(s) in 0.03s
+sm_string_msgs/sm_string_msgs                                                                             
+                        time:   [879.76 ns 882.93 ns 886.74 ns]
+                        change: [+0.0316% +0.3369% +0.7240%] (p = 0.05 < 0.05)
+                        Change within noise threshold.
+
 sm_enum_msgs/sm_enum_msgs                                                                             
-                        time:   [39.594 ns 39.640 ns 39.703 ns]
-                        change: [-2.8152% -1.8758% -1.0715%] (p = 0.00 < 0.05)
-                        Performance has improved.
+                        time:   [43.476 ns 43.829 ns 44.225 ns]
+                        change: [-0.6884% +0.5053% +1.8063%] (p = 0.42 > 0.05)
+                        No change in performance detected.
 
 sm_enum_msgs_any/sm_enum_msgs_any                                                                             
-                        time:   [47.733 ns 47.897 ns 48.054 ns]
-                        change: [+4.4202% +6.6664% +8.4494%] (p = 0.00 < 0.05)
-                        Performance has regressed.
+                        time:   [49.196 ns 49.446 ns 49.705 ns]
+                        change: [-1.8809% -0.4704% +0.8184%] (p = 0.51 > 0.05)
+                        No change in performance detected.
 
 sm_individual_msgs_any/sm_individual_msgs_any                                                                             
-                        time:   [42.486 ns 42.540 ns 42.597 ns]
-                        change: [+1.8950% +2.6158% +3.1267%] (p = 0.00 < 0.05)
-                        Performance has regressed.
+                        time:   [38.654 ns 38.781 ns 38.961 ns]
+                        change: [-2.4840% -2.0047% -1.5254%] (p = 0.00 < 0.05)
+                        Performance has improved.
 
 
 running 0 tests

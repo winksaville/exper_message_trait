@@ -22,7 +22,9 @@ fn handle_message(message: Box<dyn Any>) {
 
 fn main() {
     let message1 = Message1 { data: 42 };
-    let message2 = Message2 { data: "Hello".to_string() };
+    let message2 = Message2 {
+        data: "Hello".to_string(),
+    };
 
     // Use the boxed() method to create a Box<dyn Any> object
     let message1_boxed = Box::new(message1);

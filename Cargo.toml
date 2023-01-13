@@ -1,11 +1,13 @@
 [package]
 name = "exper_message_trait"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+once_cell = "1.17.0"
+regex = "1.7.1"
 
 [dev-dependencies]
 criterion = "0.4.0"
