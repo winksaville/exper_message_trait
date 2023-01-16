@@ -3,20 +3,14 @@ use std::{
     num::Wrapping,
 };
 
+use crate::EnumMsgs;
+
 // Dispatch a message
 pub trait ProcessMsg<Msg> {
     fn process_msg(&mut self, msg: Box<Msg>);
 }
 
-pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<Msgs>);
-
-#[derive(Debug, Clone)]
-#[allow(unused)]
-pub enum Msgs {
-    Quit,
-    Move { x: Wrapping<i32>, y: Wrapping<i32> },
-    Write(String),
-}
+pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<EnumMsgs>);
 
 pub struct SmEnumMsgs {
     current_state: SmProcessMsgFn<Self>,
@@ -93,15 +87,15 @@ impl SmEnumMsgs {
     }
 
     #[allow(clippy::boxed_local)]
-    pub fn state0(&mut self, msg: Box<Msgs>) {
+    pub fn state0(&mut self, msg: Box<EnumMsgs>) {
         self.state0_counter += 1;
         match *msg {
-            Msgs::Quit => self.state0_quit_counter += 1,
-            Msgs::Move { x, y } => {
+            EnumMsgs::Quit => self.state0_quit_counter += 1,
+            EnumMsgs::Move { x, y } => {
                 self.state0_move_counter += 1;
                 self.state0_move_xy_counter += x + y;
             }
-            Msgs::Write(s) => {
+            EnumMsgs::Write(s) => {
                 self.state0_write_counter += 1;
                 self.state0_write_sum_len_s += s.len();
             }
@@ -111,15 +105,15 @@ impl SmEnumMsgs {
     }
 
     #[allow(clippy::boxed_local)]
-    pub fn state1(&mut self, msg: Box<Msgs>) {
+    pub fn state1(&mut self, msg: Box<EnumMsgs>) {
         self.state1_counter += 1;
         match *msg {
-            Msgs::Quit => self.state1_quit_counter += 1,
-            Msgs::Move { x, y } => {
+            EnumMsgs::Quit => self.state1_quit_counter += 1,
+            EnumMsgs::Move { x, y } => {
                 self.state1_move_counter += 1;
                 self.state1_move_xy_counter += x + y;
             }
-            Msgs::Write(s) => {
+            EnumMsgs::Write(s) => {
                 self.state1_write_counter += 1;
                 self.state1_write_sum_len_s += s.len();
             }
@@ -129,8 +123,8 @@ impl SmEnumMsgs {
     }
 }
 
-impl ProcessMsg<Msgs> for SmEnumMsgs {
-    fn process_msg(&mut self, msg: Box<Msgs>) {
+impl ProcessMsg<EnumMsgs> for SmEnumMsgs {
+    fn process_msg(&mut self, msg: Box<EnumMsgs>) {
         (self.current_state)(self, msg);
     }
 }

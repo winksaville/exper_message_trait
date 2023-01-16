@@ -1,4 +1,4 @@
-use crate::{MsgAny, ProcessMsgAny};
+use crate::{EnumMsgs, MsgAny, ProcessMsgAny};
 use std::{
     fmt::{self, Debug},
     num::Wrapping,
@@ -7,14 +7,6 @@ use std::{
 // Why do I have to declare a type alias here, I'd like to `use` it?
 //    use crate::SmProcessMsgFn;
 pub type SmProcessMsgFn<SM> = fn(&mut SM, Box<MsgAny>);
-
-#[derive(Debug, Clone)]
-#[allow(unused)]
-pub enum Messages {
-    Quit,
-    Move { x: Wrapping<i32>, y: Wrapping<i32> },
-    Write(String),
-}
 
 pub struct SmEnumMsgsAny {
     current_state: SmProcessMsgFn<Self>,
@@ -92,13 +84,13 @@ impl SmEnumMsgsAny {
 
     pub fn state0(&mut self, msg: Box<MsgAny>) {
         self.state0_counter += 1;
-        match msg.downcast_ref::<Messages>() {
-            Some(Messages::Quit) => self.state0_quit_counter += 1,
-            Some(Messages::Move { x, y }) => {
+        match msg.downcast_ref::<EnumMsgs>() {
+            Some(EnumMsgs::Quit) => self.state0_quit_counter += 1,
+            Some(EnumMsgs::Move { x, y }) => {
                 self.state0_move_counter += 1;
                 self.state0_move_xy_counter += x + y;
             }
-            Some(Messages::Write(s)) => {
+            Some(EnumMsgs::Write(s)) => {
                 self.state0_write_counter += 1;
                 self.state0_write_sum_len_s += s.len();
             }
@@ -110,13 +102,13 @@ impl SmEnumMsgsAny {
 
     pub fn state1(&mut self, msg: Box<MsgAny>) {
         self.state1_counter += 1;
-        match msg.downcast_ref::<Messages>() {
-            Some(Messages::Quit) => self.state1_quit_counter += 1,
-            Some(Messages::Move { x, y }) => {
+        match msg.downcast_ref::<EnumMsgs>() {
+            Some(EnumMsgs::Quit) => self.state1_quit_counter += 1,
+            Some(EnumMsgs::Move { x, y }) => {
                 self.state1_move_counter += 1;
                 self.state1_move_xy_counter += x + y;
             }
-            Some(Messages::Write(s)) => {
+            Some(EnumMsgs::Write(s)) => {
                 self.state1_write_counter += 1;
                 self.state1_write_sum_len_s += s.len();
             }

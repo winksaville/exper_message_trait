@@ -4,27 +4,38 @@ Based on a ChatGPT conversation, the original chat is gone, but
 see [examples/chatgpt_code.md](/examples/chatgpt_code.md) for
 a little more information.
 
-The project show 3 styles for sending messages to "actors". Here these
+The project show four styles for sending messages to "actors". Here these
 actors here are implemented as simple state machines and are sent
-messages which constructed using Rust `enum` or `struct` objects.
+messages which constructed using Rust `String`, `enum` or `struct` objects.
 
-The three styles are:
- * Box<Message> where a `Message` is an `enum` or `struct` passed `as-is`.
- * Box<MsgAny> where a `MsgAny` is an `enum` passed as a `dyn Any`.
- * Box<MsgAny> where a `MsgAny` is individual `struct`'s but also passed as a `dyn Any`.
+The four styles are:
+ * `sm_string_msgs.rs` where each message is a `String`.
+ * `sm_enum_msgs.rs` where each message is an `EnumMsgs` defined in `lib.rs`.
+ * `sm_enum_msgs_any.rs` where each msg is a `Box<MsgAny>`, but where `EnumMsgs` are passed.
+ * `sm_separate_msgs.rs` where each msg is a `Box<MsgAny>`, but where  different `struct`s are passed.
 
-There is actually at least one more style, where you mix `enum`'s and individual `struct`'s.
-At the moment I feel that is messey, although if `proc_macros` are eventually
-used I think that will be perfectly reasonable thing to do as the messeyness
-should be able to be hidden in the macro. Although, there looks to be a performance
-hit when using `enum`'s and `dyn Any`.
+I should note that when using `MsgAny`, type alias for `dyn Any`, that any type
+of message can be passed including `String` so it is the most general. The
+question I'm trying to resolve is what is the "best" type of message.
+
+I have mostly been using `EnumMsgs` to date, but it's problematic from a system
+point of view. What you'd like to be able to do is create an actor define what
+messages it supports. When using `EnumMsgs` if an actor is going to be included
+in a system then it's messages must be added to the `EnumMsgs` and every actor
+and the system needs to be recompiled. Using `MsgAny` is a path to a solution,
+although currently Rust TypeId's are not universal across binaries, but I believe
+that can be [resolved](https://www.google.com/search?q=rust+universal+typeid).
+I'll be attempting to create a `universal TypeId` soon.
+
+In the near term I'll be using `MsgAny`/`dyn Any` as this set of experiments
+have convinced me its the "best" choice for now.
 
 Here are the relavent files:
  * [lib.rs](/src/lib.rs)
- * [sm_string_msgs.rs](/src/sm_string_msgs.rs), msgs passed as `String`.
+ * [sm_string_split_msgs.rs](/src/sm_string_split_msgs.rs), msgs passed as `String`.
  * [sm_enum_msgs.rs](/src/sm_enum_msgs.rs), msgs passed `as-is`
  * [sm_enum_msgs_any.rs](/src/sm_enum_msgs_any.rs), enum msgs passed via `dyn Any`.
- * [sm_individual_msgs_any.rs](/src/sm_individual_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
+ * [sm_separate_msgs_any.rs](/src/sm_separate_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
  * [main.rs](/src/main.rs), a main which runs all three types.
  * [crit.rs](/benches/crit.rs), benchmarks.
 
@@ -36,10 +47,10 @@ Here are the relavent files:
 
 ```
 $ cargo run
-   Compiling exper_message_trait v0.8.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
-    Finished dev [unoptimized + debuginfo] target(s) in 0.64s
+   Compiling exper_message_trait v0.9.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
+    Finished dev [unoptimized + debuginfo] target(s) in 0.44s
      Running `target/debug/exper_message_trait`
-mysm: SmStringMsgs {
+mysm: SmStringSplitParseMsgs {
     state0_counter: 2,
     state0_quit_counter: 0,
     state0_move_counter: 0,
@@ -87,7 +98,7 @@ mysm: SmEnumMsgsAny {
     state1_write_sum_len_s_counter: 0,
     state1_none_counter: 0,
 }
-mysm: SmIndividualMsgsAny {
+mysm: SmSeparateMsgsAny {
     state0_counter: 2,
     state0_quit_counter: 0,
     state0_move_counter: 0,
@@ -103,38 +114,53 @@ mysm: SmIndividualMsgsAny {
     state1_write_sum_len_s_counter: 0,
     state1_none_counter: 0,
 }
+
 ```
 
 ## Benchmarks:
 
-There are four benchmarks `sm_string_msgs`, `sm_enum_msgs`, `sm_enum_msgs_any` and `sm_individual_msgs_any`.
-They similar in perforamnce except `sm_string_msgs` is about 20x slower. At this
-time I wouldn't bet the house on any of these benchmarks, but its an indicator.
+There are four benchmarks `quit`, `write`, `move` and `all`. Each of these test
+a particular message sequence. `quit`, `write` and `move` are 
+four benchmarks one each for the different type of messages, `separate_msgs_any`
+`enum_any`, `enum_msgs` and `string_spit`.
 
 Note: See issue #1
 
+Below is a simple table of the times and [here are the graphs for the benchmarks](https://htmlpreview.github.io/?https://github.com/winksaville/exper_message_trait/blob/main/benches/results/criterion/reports/index.html).
+
 ```
-$ taskset -c 0 cargo criterion
+$ ./benchmarks.sh 
+   Compiling autocfg v1.1.0
+   Compiling proc-macro2 v1.0.49
+   ...
+   Compiling tinytemplate v1.2.1
+   Compiling criterion v0.4.0
+    Finished bench [optimized] target(s) in 10.80s
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
     Finished bench [optimized] target(s) in 0.03s
-sm_string_msgs/sm_string_msgs                                                                             
-                        time:   [879.76 ns 882.93 ns 886.74 ns]
-                        change: [+0.0316% +0.3369% +0.7240%] (p = 0.05 < 0.05)
-                        Change within noise threshold.
+quit/separate_msgs_any  time:   [4.2910 ns 4.2953 ns 4.3002 ns]                                    
+quit/enum_any           time:   [13.738 ns 13.796 ns 13.855 ns]                           
+quit/enum_msgs          time:   [9.8410 ns 9.8945 ns 9.9505 ns]                            
+quit/string_split       time:   [15.192 ns 15.205 ns 15.219 ns]                               
 
-sm_enum_msgs/sm_enum_msgs                                                                             
-                        time:   [43.476 ns 43.829 ns 44.225 ns]
-                        change: [-0.6884% +0.5053% +1.8063%] (p = 0.42 > 0.05)
-                        No change in performance detected.
+write/separate_msgs_any time:   [21.357 ns 21.486 ns 21.683 ns]                                     
+write/enum_any          time:   [21.863 ns 21.944 ns 22.042 ns]                            
+write/enum_msgs         time:   [20.623 ns 20.700 ns 20.780 ns]                             
+write/string_split      time:   [31.760 ns 31.869 ns 31.983 ns]                                
 
-sm_enum_msgs_any/sm_enum_msgs_any                                                                             
-                        time:   [49.196 ns 49.446 ns 49.705 ns]
-                        change: [-1.8809% -0.4704% +0.8184%] (p = 0.51 > 0.05)
-                        No change in performance detected.
+move/separate_msgs_any  time:   [16.890 ns 16.932 ns 16.973 ns]                                    
+move/enum_any           time:   [14.250 ns 14.305 ns 14.360 ns]                           
+move/enum_msgs          time:   [12.225 ns 12.246 ns 12.266 ns]                            
+move/string_split       time:   [215.72 ns 216.80 ns 217.67 ns]                              
 
-sm_individual_msgs_any/sm_individual_msgs_any                                                                             
-                        time:   [38.654 ns 38.781 ns 38.961 ns]
-                        change: [-2.4840% -2.0047% -1.5254%] (p = 0.00 < 0.05)
-                        Performance has improved.
+all/separate_msgs_any   time:   [42.958 ns 43.076 ns 43.200 ns]                                   
+all/enum_any            time:   [48.001 ns 48.162 ns 48.322 ns]                          
+all/enum_msgs           time:   [39.745 ns 39.783 ns 39.829 ns]                           
+all/string_split        time:   [275.95 ns 276.97 ns 277.81 ns]                             
 
 
 running 0 tests

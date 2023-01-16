@@ -11,38 +11,54 @@ pub trait ProcessStringMsg {
 
 pub type SmProcessMsgFn<SM> = fn(&mut SM, String);
 
-// From: https://docs.rs/once_cell/1.17.0/once_cell/#lazily-compiled-regex
-macro_rules! regex {
-    ($re:literal $(,)?) => {{
-        static RE: once_cell::sync::OnceCell<regex::Regex> = once_cell::sync::OnceCell::new();
-        RE.get_or_init(|| regex::Regex::new($re).unwrap())
-    }};
-}
-
 fn decode_move(msg: String) -> Result<(Wrapping<i32>, Wrapping<i32>), Box<dyn Error>> {
-    let re = regex!(r"Move:\s*\{\s*x:\s*(\d+)\s*,\s*y:\s*(\d+)\s*\}");
-    if let Some(cap) = re.captures(&msg) {
-        if cap.len() == 3 {
-            let x = Wrapping::<i32>(cap[1].parse()?);
-            let y = Wrapping::<i32>(cap[2].parse()?);
-
-            Ok((x, y))
-        } else {
-            panic!("Impossible or re: '{re:?}', expecting 2 captured items in Move: msg: '{msg}'");
+    let components: Vec<&str> = msg.split(' ').collect();
+    if components.len() != 5 {
+        return Err(format!(
+            "Bad Move msg expecting 5 found {} components: '{msg}'",
+            components.len()
+        )
+        .into());
+    }
+    let x = if components[1] == "x" {
+        match components[2].parse::<i32>() {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(
+                    format!("The 'x' paraemter wasn't an i32 found {}", components[2])
+                        .as_str()
+                        .into(),
+                );
+            }
         }
     } else {
-        return Err(format!("Bad Move msg: '{msg}'").into());
-    }
+        return Err(format!("Expected 'x' found {}", components[1])
+            .as_str()
+            .into());
+    };
+    let y = if components[3] == "y" {
+        match components[4].parse::<i32>() {
+            Ok(v) => v,
+            Err(_) => {
+                return Err(
+                    format!("The 'y' paraemter wasn't an i32 found {}", components[4])
+                        .as_str()
+                        .into(),
+                );
+            }
+        }
+    } else {
+        return Err(format!("Expected 'y' found {}", components[3])
+            .as_str()
+            .into());
+    };
+
+    Ok((Wrapping(x), Wrapping(y)))
 }
 
 fn decode_write(msg: String) -> Result<String, Box<dyn Error>> {
-    let re = regex!(r"Write:\s*(.*)");
-    if let Some(cap) = re.captures(&msg) {
-        if cap.len() == 2 {
-            Ok(cap[1].to_owned())
-        } else {
-            panic!("Impossible or re: '{re:?}', expecting 1 captured items in Write: msg: '{msg}'");
-        }
+    if let Some((_action, strg)) = msg.split_once(' ') {
+        Ok(strg.to_owned())
     } else {
         return Err(format!("Bad Write msg: '{msg}'").into());
     }
@@ -69,7 +85,7 @@ pub struct SmStringMsgs {
 
 impl Debug for SmStringMsgs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SmStringMsgs")
+        f.debug_struct("SmStringSplitParseMsgs")
             //.field("current_state", &self.current_state)
             .field("state0_counter", &self.state0_counter)
             .field("state0_quit_counter", &self.state0_quit_counter)
@@ -125,9 +141,9 @@ impl SmStringMsgs {
     #[allow(clippy::boxed_local)]
     pub fn state0(&mut self, msg: String) {
         self.state0_counter += 1;
-        if msg.starts_with("Quit:") {
+        if msg.starts_with("Quit") {
             self.state0_quit_counter += 1;
-        } else if msg.starts_with("Move:") {
+        } else if msg.starts_with("Move ") {
             match decode_move(msg) {
                 Ok((x, y)) => {
                     self.state0_move_counter += 1;
@@ -137,7 +153,7 @@ impl SmStringMsgs {
                     panic!("state0: {why}");
                 }
             }
-        } else if msg.starts_with("Write:") {
+        } else if msg.starts_with("Write ") {
             match decode_write(msg) {
                 Ok(s) => {
                     self.state0_write_counter += 1;
@@ -157,9 +173,9 @@ impl SmStringMsgs {
     #[allow(clippy::boxed_local)]
     pub fn state1(&mut self, msg: String) {
         self.state1_counter += 1;
-        if msg.starts_with("Quit:") {
+        if msg.starts_with("Quit") {
             self.state1_quit_counter += 1;
-        } else if msg.starts_with("Move:") {
+        } else if msg.starts_with("Move ") {
             match decode_move(msg) {
                 Ok((x, y)) => {
                     self.state1_move_counter += 1;
@@ -169,7 +185,7 @@ impl SmStringMsgs {
                     panic!("state1: {why}");
                 }
             }
-        } else if msg.starts_with("Write:") {
+        } else if msg.starts_with("Write ") {
             match decode_write(msg) {
                 Ok(s) => {
                     self.state1_write_counter += 1;

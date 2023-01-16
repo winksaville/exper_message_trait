@@ -21,7 +21,7 @@ pub struct Move {
 pub struct Write(pub String);
 
 //#[derive(Debug)]
-pub struct SmIndividualMsgsAny {
+pub struct SmSeparateMsgsAny {
     current_state: SmProcessMsgFn<Self>,
     pub state0_counter: usize,
     pub state0_quit_counter: usize,
@@ -40,9 +40,9 @@ pub struct SmIndividualMsgsAny {
     pub state1_none_counter: usize,
 }
 
-impl Debug for SmIndividualMsgsAny {
+impl Debug for SmSeparateMsgsAny {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SmIndividualMsgsAny")
+        f.debug_struct("SmSeparateMsgsAny")
             //.field("current_state", &self.current_state)
             .field("state0_counter", &self.state0_counter)
             .field("state0_quit_counter", &self.state0_quit_counter)
@@ -69,7 +69,7 @@ impl Debug for SmIndividualMsgsAny {
 }
 
 #[allow(unused)]
-impl SmIndividualMsgsAny {
+impl SmSeparateMsgsAny {
     pub fn new(initial_state: SmProcessMsgFn<Self>) -> Self {
         Self {
             current_state: initial_state,
@@ -109,7 +109,7 @@ impl SmIndividualMsgsAny {
             self.state0_none_counter += 1;
         }
 
-        self.transition(SmIndividualMsgsAny::state1);
+        self.transition(SmSeparateMsgsAny::state1);
     }
 
     pub fn state1(&mut self, msg: Box<MsgAny>) {
@@ -126,11 +126,11 @@ impl SmIndividualMsgsAny {
             self.state1_none_counter += 1;
         }
 
-        self.transition(SmIndividualMsgsAny::state0);
+        self.transition(SmSeparateMsgsAny::state0);
     }
 }
 
-impl ProcessMsgAny for SmIndividualMsgsAny {
+impl ProcessMsgAny for SmSeparateMsgsAny {
     fn process_msg_any(&mut self, msg: Box<MsgAny>) {
         (self.current_state)(self, msg);
     }

@@ -1,4 +1,12 @@
-use std::any::Any;
+use std::{any::Any, num::Wrapping};
+
+#[derive(Debug, Clone)]
+#[allow(unused)]
+pub enum EnumMsgs {
+    Quit,
+    Move { x: Wrapping<i32>, y: Wrapping<i32> },
+    Write(String),
+}
 
 // Messages are things that implement trait std::any::Any
 // which is most anything
@@ -15,5 +23,5 @@ pub trait ProcessMsgAny {
 
 pub mod sm_enum_msgs;
 pub mod sm_enum_msgs_any;
-pub mod sm_individual_msgs_any;
+pub mod sm_separate_msgs_any;
 pub mod sm_string_msgs;
