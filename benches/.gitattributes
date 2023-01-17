@@ -1,4 +1,4 @@
-results linguist-generated=true
-#*.html linguist-generated=true
-#*.json linguist-generated=true
-#*.svg linguist-generated=true
+#results linguist-generated=true # This doesn't work, but it should?
+*.html linguist-generated=true
+*.json linguist-generated=true
+*.svg linguist-generated=true
