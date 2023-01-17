@@ -85,7 +85,7 @@ pub struct SmStringMsgs {
 
 impl Debug for SmStringMsgs {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SmStringSplitParseMsgs")
+        f.debug_struct("SmStringMsgs")
             //.field("current_state", &self.current_state)
             .field("state0_counter", &self.state0_counter)
             .field("state0_quit_counter", &self.state0_quit_counter)

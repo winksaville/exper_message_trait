@@ -87,7 +87,7 @@ fn all_bench(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("string_split", |b| {
+    group.bench_function("string_msg", |b| {
         let mut sm = SmStringMsgs::new(SmStringMsgs::state0);
 
         let mut x = Wrapping(1i32);
@@ -95,14 +95,14 @@ fn all_bench(c: &mut Criterion) {
         b.iter(|| {
             x += 1;
             y += 1;
-            let bmw = format!("Move x {} y {}", x, y);
-            sm.process_string_msg(bmw);
+            let mm = format!("Move x {} y {}", x, y);
+            sm.process_string_msg(mm);
 
-            let bmm = String::from("Write Hello, world!");
-            sm.process_string_msg(bmm);
+            let mw = String::from("Write Hello, world!");
+            sm.process_string_msg(mw);
 
-            let bmq = String::from("Quit");
-            sm.process_string_msg(bmq);
+            let mq = String::from("Quit");
+            sm.process_string_msg(mq);
         });
     });
 
@@ -148,12 +148,12 @@ fn quit_bench(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("string_split", |b| {
+    group.bench_function("string_msg", |b| {
         let mut sm = SmStringMsgs::new(SmStringMsgs::state0);
 
         b.iter(|| {
-            let bmq = String::from("Quit");
-            sm.process_string_msg(bmq);
+            let mq = String::from("Quit");
+            sm.process_string_msg(mq);
         });
     });
 
@@ -199,12 +199,12 @@ fn write_bench(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("string_split", |b| {
+    group.bench_function("string_msg", |b| {
         let mut sm = SmStringMsgs::new(SmStringMsgs::state0);
 
         b.iter(|| {
-            let bmq = String::from("Write Hello, world!");
-            sm.process_string_msg(bmq);
+            let mw = String::from("Write Hello, world!");
+            sm.process_string_msg(mw);
         });
     });
 
@@ -262,7 +262,7 @@ fn move_bench(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("string_split", |b| {
+    group.bench_function("string_msg", |b| {
         let mut sm = SmStringMsgs::new(SmStringMsgs::state0);
 
         let mut x = Wrapping(1i32);
@@ -270,13 +270,13 @@ fn move_bench(c: &mut Criterion) {
         b.iter(|| {
             x += 1;
             y += 1;
-            let bmm = format!("Move x {} y {}", x, y);
-            sm.process_string_msg(bmm);
+            let mm = format!("Move x {} y {}", x, y);
+            sm.process_string_msg(mm);
         });
     });
 
     //println!("move_bench:-");
 }
 
-criterion_group!(benches, quit_bench, write_bench, move_bench, all_bench);
+criterion_group!(benches, all_bench, quit_bench, write_bench, move_bench);
 criterion_main!(benches);
