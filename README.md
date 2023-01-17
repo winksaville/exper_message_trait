@@ -32,7 +32,7 @@ have convinced me its the "best" choice for now.
 
 Here are the relavent files:
  * [lib.rs](/src/lib.rs)
- * [sm_string_split_msgs.rs](/src/sm_string_split_msgs.rs), msgs passed as `String`.
+ * [sm_string_msgs.rs](/src/sm_string_msgs.rs), msgs passed as `String`.
  * [sm_enum_msgs.rs](/src/sm_enum_msgs.rs), msgs passed `as-is`
  * [sm_enum_msgs_any.rs](/src/sm_enum_msgs_any.rs), enum msgs passed via `dyn Any`.
  * [sm_separate_msgs_any.rs](/src/sm_separate_msgs_any.rs), individual `structs`'s passed via `dyn Any`.
@@ -47,10 +47,10 @@ Here are the relavent files:
 
 ```
 $ cargo run
-   Compiling exper_message_trait v0.9.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
+   Compiling exper_message_trait v0.10.0 (/home/wink/prgs/rust/myrepos/exper_message_trait)
     Finished dev [unoptimized + debuginfo] target(s) in 0.44s
      Running `target/debug/exper_message_trait`
-mysm: SmStringSplitParseMsgs {
+mysm: SmStringMsgs {
     state0_counter: 2,
     state0_quit_counter: 0,
     state0_move_counter: 0,
@@ -114,15 +114,125 @@ mysm: SmSeparateMsgsAny {
     state1_write_sum_len_s_counter: 0,
     state1_none_counter: 0,
 }
-
 ```
 
 ## Benchmarks:
 
-There are four benchmarks `quit`, `write`, `move` and `all`. Each of these test
-a particular message sequence. `quit`, `write` and `move` are 
-four benchmarks one each for the different type of messages, `separate_msgs_any`
-`enum_any`, `enum_msgs` and `string_spit`.
+There are four benchmarks `quit`, `write`, `move` and `all`:
+
+ * `quit`: Processes a message with just an action.
+ * `write`: Processes a message with an action and a string parameter.
+ * `move`: Processes a message with an action and two integer parameters.
+ * `all`: Processes all 3 messages.
+
+In each of those benchmarks there are 4 inner benchmarks:
+
+ * `separate_msgs_any`: Each message is a separate `struct` and passed as a `Box<MsgAny>`.
+ * `enum_any`: Each message is a member of an `enum EnumMsg` and passed as a `Box<MsgAny>`.
+ * `enum_msgs`: Each message is a member of an `enum EnumMsg` and passed as a `Box<EnumMsg>`.
+ * `string_msg`: Each message is a `String` and passed as a `String`.
+
+> Note: In Rust a Box:<Xxx> means `Xxx` is allocated on the heap and in Rust `String` is allocated on the heap.
+
+Look in [crit.rs](/benches/crit.rs) for the actual benchmarks and
+below is the `all` benchmark:
+```
+fn all_bench(c: &mut Criterion) {
+    //println!("all:+");
+
+    let plot_config = PlotConfiguration::default();
+
+    let mut group = c.benchmark_group("all");
+    group.plot_config(plot_config);
+
+    group.bench_function("separate_msgs_any", |b| {
+        let mut sm = SmSeparateMsgsAny::new(SmSeparateMsgsAny::state0);
+
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
+        b.iter(|| {
+            x += 1;
+            y += 1;
+            let mm = Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg_any(bmm);
+
+            let mw = Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg_any(bmw);
+
+            let mq = Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg_any(bmq);
+        });
+    });
+
+    group.bench_function("enum_any", |b| {
+        let mut sm = SmEnumMsgsAny::new(SmEnumMsgsAny::state0);
+
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
+        b.iter(|| {
+            x += 1;
+            y += 1;
+            let mm = EnumMsgs::Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg_any(bmm);
+
+            let mw = EnumMsgs::Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg_any(bmw);
+
+            let mq = EnumMsgs::Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg_any(bmq);
+        });
+    });
+
+    group.bench_function("enum_msgs", |b| {
+        let mut sm = SmEnumMsgs::new(SmEnumMsgs::state0);
+
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
+        b.iter(|| {
+            x += 1;
+            y += 1;
+            let mm = EnumMsgs::Move { x, y };
+            let bmm = Box::new(mm);
+            sm.process_msg(bmm);
+
+            let mw = EnumMsgs::Write("Hi".to_owned());
+            let bmw = Box::new(mw);
+            sm.process_msg(bmw);
+
+            let mq = EnumMsgs::Quit;
+            let bmq = Box::new(mq);
+            sm.process_msg(bmq);
+        });
+    });
+
+    group.bench_function("string_msg", |b| {
+        let mut sm = SmStringMsgs::new(SmStringMsgs::state0);
+
+        let mut x = Wrapping(1i32);
+        let mut y = Wrapping(2i32);
+        b.iter(|| {
+            x += 1;
+            y += 1;
+            let mm = format!("Move x {} y {}", x, y);
+            sm.process_string_msg(mm);
+
+            let mw = String::from("Write Hello, world!");
+            sm.process_string_msg(mw);
+
+            let mq = String::from("Quit");
+            sm.process_string_msg(mq);
+        });
+    });
+
+    //println!("all:-");
+}
+```
 
 Note: See issue #1
 
@@ -135,32 +245,32 @@ $ ./benchmarks.sh
    ...
    Compiling tinytemplate v1.2.1
    Compiling criterion v0.4.0
-    Finished bench [optimized] target(s) in 10.80s
+    Finished bench [optimized] target(s) in 10.69s
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
     Finished bench [optimized] target(s) in 0.03s
-quit/separate_msgs_any  time:   [4.2910 ns 4.2953 ns 4.3002 ns]                                    
-quit/enum_any           time:   [13.738 ns 13.796 ns 13.855 ns]                           
-quit/enum_msgs          time:   [9.8410 ns 9.8945 ns 9.9505 ns]                            
-quit/string_split       time:   [15.192 ns 15.205 ns 15.219 ns]                               
+all/separate_msgs_any   time:   [42.201 ns 42.329 ns 42.468 ns]                                   
+all/enum_any            time:   [48.673 ns 48.830 ns 48.992 ns]                          
+all/enum_msgs           time:   [39.604 ns 39.638 ns 39.675 ns]                           
+all/string_msg          time:   [305.58 ns 306.95 ns 308.04 ns]                           
 
-write/separate_msgs_any time:   [21.357 ns 21.486 ns 21.683 ns]                                     
-write/enum_any          time:   [21.863 ns 21.944 ns 22.042 ns]                            
-write/enum_msgs         time:   [20.623 ns 20.700 ns 20.780 ns]                             
-write/string_split      time:   [31.760 ns 31.869 ns 31.983 ns]                                
+quit/separate_msgs_any  time:   [4.4949 ns 4.4977 ns 4.5014 ns]                                    
+quit/enum_any           time:   [11.544 ns 11.553 ns 11.565 ns]                           
+quit/enum_msgs          time:   [9.7169 ns 9.8287 ns 9.9658 ns]                            
+quit/string_msg         time:   [15.140 ns 15.150 ns 15.162 ns]                             
 
-move/separate_msgs_any  time:   [16.890 ns 16.932 ns 16.973 ns]                                    
-move/enum_any           time:   [14.250 ns 14.305 ns 14.360 ns]                           
-move/enum_msgs          time:   [12.225 ns 12.246 ns 12.266 ns]                            
-move/string_split       time:   [215.72 ns 216.80 ns 217.67 ns]                              
+write/separate_msgs_any time:   [20.573 ns 20.599 ns 20.635 ns]                                     
+write/enum_any          time:   [21.508 ns 21.562 ns 21.614 ns]                            
+write/enum_msgs         time:   [19.698 ns 19.736 ns 19.777 ns]                             
+write/string_msg        time:   [30.433 ns 30.461 ns 30.493 ns]                              
 
-all/separate_msgs_any   time:   [42.958 ns 43.076 ns 43.200 ns]                                   
-all/enum_any            time:   [48.001 ns 48.162 ns 48.322 ns]                          
-all/enum_msgs           time:   [39.745 ns 39.783 ns 39.829 ns]                           
-all/string_split        time:   [275.95 ns 276.97 ns 277.81 ns]                             
+move/separate_msgs_any  time:   [12.649 ns 12.660 ns 12.677 ns]                                    
+move/enum_any           time:   [14.698 ns 14.795 ns 14.894 ns]                           
+move/enum_msgs          time:   [12.067 ns 12.091 ns 12.126 ns]                            
+move/string_msg         time:   [235.36 ns 235.92 ns 236.36 ns]                            
 
 
 running 0 tests
